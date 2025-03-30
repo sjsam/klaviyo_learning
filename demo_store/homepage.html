@@ -11,14 +11,49 @@
         padding: 0;
         background-color: #f9f9f9;
       }
-      header {
-        background-color: #ffffff;
-        padding: 1rem 2rem;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      nav {
+        background: #fff;
+        border-bottom: 1px solid #eee;
+        padding: 0.5rem 2rem;
       }
-      header h1 {
-        margin: 0;
-        font-size: 1.5rem;
+      .nav-content {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+      }
+      .logo {
+        font-weight: bold;
+        font-size: 1.2rem;
+        color: #333;
+        margin-bottom: 10px;
+      }
+      #category-menu {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+      .nav-item {
+        position: relative;
+      }
+      .dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        display: none;
+        background: #fff;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        z-index: 10;
+      }
+      .nav-item:hover .dropdown {
+        display: block;
+      }
+      .dropdown-item {
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+      }
+      .dropdown-item:hover {
+        background-color: #f0f0f0;
       }
       .products-container {
         display: flex;
@@ -66,9 +101,12 @@
     </style>
   </head>
   <body>
-    <header>
-      <h1>Adventure Cycles - Product Listings</h1>
-    </header>
+    <nav id="category-nav">
+      <div class="nav-content">
+        <div class="logo">Adventure Cycles</div>
+        <div id="category-menu"></div>
+      </div>
+    </nav>
     <main>
       <div class="products-container" id="products"></div>
     </main>
@@ -88,16 +126,114 @@
         return true;
       });
 
+      // Category navigation
+      const categoryMenu = document.getElementById("category-menu");
+
+      const categoryMap = {};
+      products.forEach(({ Node1, Node2, Node3 }) => {
+        if (!Node1) return;
+
+        if (!categoryMap[Node1]) categoryMap[Node1] = {};
+
+        if (Node2 && Node3) {
+          if (!categoryMap[Node1][Node2]) categoryMap[Node1][Node2] = new Set();
+          categoryMap[Node1][Node2].add(Node3);
+        } else if (Node2) {
+          if (!categoryMap[Node1][Node2]) categoryMap[Node1][Node2] = new Set();
+        } else {
+          if (!categoryMap[Node1][""]) categoryMap[Node1][""] = new Set();
+        }
+      });
+
+      function createCategoryNav() {
+        for (const mainCat of Object.keys(categoryMap)) {
+          const mainItem = document.createElement("div");
+          mainItem.className = "nav-item";
+
+          const mainBtn = document.createElement("button");
+          mainBtn.textContent = mainCat;
+          mainBtn.addEventListener("click", () => {
+            currentPage = 1;
+            applyCategoryFilter(mainCat);
+          });
+
+          const dropdown = document.createElement("div");
+          dropdown.className = "dropdown";
+
+          for (const subCat of Object.keys(categoryMap[mainCat])) {
+            const subItem = document.createElement("div");
+            subItem.className = "dropdown-item";
+            const subBtn = document.createElement("div");
+            subBtn.textContent = subCat;
+            subBtn.style.cursor = "pointer";
+            subItem.appendChild(subBtn);
+
+            if (categoryMap[mainCat][subCat].size > 0) {
+              const subDropdown = document.createElement("div");
+              subDropdown.className = "dropdown right";
+
+              categoryMap[mainCat][subCat].forEach((subSub) => {
+                const subSubItem = document.createElement("div");
+                subSubItem.className = "dropdown-item";
+                subSubItem.textContent = subSub;
+                subSubItem.addEventListener("click", () => {
+                  currentPage = 1;
+                  applyCategoryFilter(mainCat, subCat, subSub);
+                });
+                subDropdown.appendChild(subSubItem);
+              });
+
+              subItem.appendChild(subDropdown);
+              subItem.addEventListener("mouseenter", () => {
+                subDropdown.style.display = "block";
+              });
+              subItem.addEventListener("mouseleave", () => {
+                subDropdown.style.display = "none";
+              });
+            } else {
+              subBtn.addEventListener("click", () => {
+                currentPage = 1;
+                applyCategoryFilter(mainCat, subCat);
+              });
+            }
+
+            dropdown.appendChild(subItem);
+          }
+
+          mainItem.appendChild(mainBtn);
+          mainItem.appendChild(dropdown);
+          categoryMenu.appendChild(mainItem);
+        }
+      }
+
+      function applyCategoryFilter(main, sub = "", subSub = "") {
+        const seen = new Set();
+        filteredProducts = products.filter((product) => {
+          const key = product.name.trim().toLowerCase();
+          if (seen.has(key)) return false;
+          const match =
+            product.Node1 === main &&
+            (!sub || product.Node2 === sub) &&
+            (!subSub || product.Node3 === subSub);
+          if (match) {
+            seen.add(key);
+            return true;
+          }
+          return false;
+        });
+        renderPage(currentPage, filteredProducts);
+      }
+
       // Pagination controls
       const pagination = document.createElement("div");
       pagination.style.textAlign = "center";
       pagination.style.padding = "1rem";
 
-      function renderPage(page) {
+      function renderPage(page, sourceList = uniqueProducts) {
         container.innerHTML = "";
         const start = (page - 1) * productsPerPage;
         const end = start + productsPerPage;
-        const visible = uniqueProducts.slice(start, end);
+        const visible = sourceList.slice(start, end);
 
         visible.forEach((product) => {
           const card = document.createElement("div");
@@ -121,12 +257,12 @@
           container.appendChild(card);
         });
 
-        renderPagination();
+        renderPagination(sourceList);
       }
 
-      function renderPagination() {
+      function renderPagination(list) {
         pagination.innerHTML = "";
-        const totalPages = Math.ceil(uniqueProducts.length / productsPerPage);
+        const totalPages = Math.ceil(list.length / productsPerPage);
         for (let i = 1; i <= totalPages; i++) {
           const btn = document.createElement("button");
           btn.textContent = i;
@@ -139,13 +275,14 @@
           }
           btn.addEventListener("click", () => {
             currentPage = i;
-            renderPage(currentPage);
+            renderPage(currentPage, list);
           });
           pagination.appendChild(btn);
         }
       }
 
       document.body.appendChild(pagination);
+      createCategoryNav();
       renderPage(currentPage);
     </script>
   </body>
