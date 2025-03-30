@@ -238,6 +238,11 @@
         visible.forEach((product) => {
           const card = document.createElement("div");
           card.className = "product-card";
+          card.style.cursor = "pointer";
+          card.addEventListener("click", () => {
+            localStorage.setItem("selectedProduct", JSON.stringify(product));
+            window.location.href = "product.html";
+          });
           card.innerHTML = `
             <img src="${product.image}" alt="${product.name}">
             <div class="product-info">
