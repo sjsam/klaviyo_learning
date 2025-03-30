@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Adventure Cycles - Products</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f9f9f9;
+      }
+      header {
+        background-color: #ffffff;
+        padding: 1rem 2rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      header h1 {
+        margin: 0;
+        font-size: 1.5rem;
+      }
+      .products-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        padding: 2rem;
+        justify-content: center;
+      }
+      .product-card {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        width: 250px;
+        overflow: hidden;
+        text-align: center;
+        transition: transform 0.2s ease;
+      }
+      .product-card:hover {
+        transform: translateY(-5px);
+      }
+      .product-card img {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+      }
+      .product-info {
+        padding: 1rem;
+      }
+      .product-info h2 {
+        font-size: 1.1rem;
+        margin: 0.5rem 0;
+      }
+      .product-info p {
+        font-size: 0.9rem;
+        color: #555;
+        height: 70px;
+        padding: 1rem 1rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .product-info .price {
+        font-weight: bold;
+        margin-top: 0.5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Adventure Cycles - Product Listings</h1>
+    </header>
+    <main>
+      <div class="products-container" id="products"></div>
+    </main>
+
+    <script src="products.js"></script>
+    <script>
+      const container = document.getElementById("products");
+      const productsPerPage = 8;
+      let currentPage = 1;
+
+      // Deduplicate by product name
+      const seen = new Set();
+      const uniqueProducts = products.filter((product) => {
+        const key = product.name.trim().toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      // Pagination controls
+      const pagination = document.createElement("div");
+      pagination.style.textAlign = "center";
+      pagination.style.padding = "1rem";
+
+      function renderPage(page) {
+        container.innerHTML = "";
+        const start = (page - 1) * productsPerPage;
+        const end = start + productsPerPage;
+        const visible = uniqueProducts.slice(start, end);
+
+        visible.forEach((product) => {
+          const card = document.createElement("div");
+          card.className = "product-card";
+          card.innerHTML = `
+            <img src="${product.image}" alt="${product.name}">
+            <div class="product-info">
+              <h2>${product.name}</h2>
+              <p>${(() => {
+                const words = product.description.split(" ");
+                let trimmed = "";
+                for (const word of words) {
+                  if ((trimmed + word).length > 120) break;
+                  trimmed += word + " ";
+                }
+                return trimmed.trim() + "...";
+              })()}</p>
+              <div class="price">${product.price}</div>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+
+        renderPagination();
+      }
+
+      function renderPagination() {
+        pagination.innerHTML = "";
+        const totalPages = Math.ceil(uniqueProducts.length / productsPerPage);
+        for (let i = 1; i <= totalPages; i++) {
+          const btn = document.createElement("button");
+          btn.textContent = i;
+          btn.style.margin = "0 5px";
+          btn.style.padding = "5px 10px";
+          btn.style.cursor = "pointer";
+          if (i === currentPage) {
+            btn.disabled = true;
+            btn.style.fontWeight = "bold";
+          }
+          btn.addEventListener("click", () => {
+            currentPage = i;
+            renderPage(currentPage);
+          });
+          pagination.appendChild(btn);
+        }
+      }
+
+      document.body.appendChild(pagination);
+      renderPage(currentPage);
+    </script>
+  </body>
+</html>
